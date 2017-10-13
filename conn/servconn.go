@@ -2,11 +2,8 @@ package conn
 
 import(
     "github.com/xiaominfc/xiny/base"
-    "github.com/xiaominfc/xiny/utils"
-    "math/rand"
 )
 
-var servList = utils.NewArray()
 
 const CACHESIZE = 1024
 
@@ -41,15 +38,6 @@ func AddNewServFor(host string, port int, manager ServConnManager) *ServConn{
     return server
 }
 
-func GetServConn() *ServConn{
-   size := servList.Size()
-   index := rand.Intn(size)
-   server,err := servList.Get(index)
-   if err!=nil {
-
-   }
-   return server.(*ServConn)
-}
 
 func (this *ServConn)handleData(b []byte) {
     if this.manager != nil {
