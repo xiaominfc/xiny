@@ -4,6 +4,8 @@ import (
     "github.com/xiaominfc/xiny/base"
     "github.com/xiaominfc/xiny/utils"
     "github.com/xiaominfc/xiny/conn"
+    "github.com/xiaominfc/xiny/pb/IM_Login"
+    "github.com/xiaominfc/xiny/pb/IM_BaseDefine"
     "net"
     "fmt"
 	"time"
@@ -58,6 +60,13 @@ func (manager *Manager) GetServConn() *conn.ServConn {
 
 
 func main() {
+
+    loginReq := &IM_Login.IMLoginReq{
+        UserName:utils.NewString("xiaominfc"),
+        Password:utils.NewString("test"),
+        OnlineStatus:&IM_BaseDefine.UserStatType.UserStatType_USER_STATUS_ONLINE}
+
+    println(loginReq)
 
     test := func (){
         println("hello")
