@@ -7,9 +7,12 @@ import (
     "net"
     "fmt"
 	"time"
+    "math/rand"
 )
 
-type Manager struct{}
+type Manager struct{
+    ServConnList utils.Array
+}
 
 func (manager *Manager) NewConn(conn *net.TCPConn){
     println("new connect");
@@ -38,6 +41,21 @@ func (manager *Manager) HandleData(b []byte) error {
    return nil
 }
 
+func (manager *Manager) OnServConnAdd(servconn *conn.ServConn) {
+    println("add new servConn")
+    manager.ServConnList.Add(servconn)
+}
+
+func (manager *Manager) GetServConn() *conn.ServConn {
+    size := manager.ServConnList.Size()
+    index := rand.Intn(size)
+    server,err := manager.ServConnList.Get(index)
+    if err!=nil {
+
+    }
+    return server.(*conn.ServConn)
+}
+
 
 func main() {
 
@@ -46,10 +64,11 @@ func main() {
     }
     utils.AddTask(2*time.Second, test)
     manager := &Manager{}
+    manager.ServConnList = utils.NewArray()
     server := base.NewTcpServer("0.0.0.0",9090, manager)
     go server.Start()
     time.Sleep(2 * time.Second)
-    servConn := conn.AddNewServFor("127.0.0.1",9090,manager)
+    conn.AddNewServFor("127.0.0.1",9090,manager)
 
     println(time.Second)
 	client,_ := base.Connect("127.0.0.1", 9090)
@@ -58,7 +77,7 @@ func main() {
     for i:=0; i < 20 ; i++ {
         time.Sleep(2 * time.Second)
         client.Send([]byte{'h','e','r'})
-        servConn.Send([]byte{'h','e','r'})
+        manager.GetServConn().Send([]byte{'h','e','r'})
     }
 	//client.Reciv(make([]byte, 100))
 }

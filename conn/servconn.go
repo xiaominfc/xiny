@@ -10,31 +10,33 @@ var servList = utils.NewArray()
 
 const CACHESIZE = 1024
 
-type ServConnHandler interface {
+type ServConnManager interface {
     HandleData(b []byte) error
+    OnServConnAdd(server *ServConn)
+    GetServConn() *ServConn
 }
 
 type ServConn struct {
     conn *base.BConn
     host string
     port int
-    handler ServConnHandler
+    manager ServConnManager
     cacheData []byte
 }
 
 
 
-func NewConnect(host string, port int,handler ServConnHandler) *ServConn {
-    server := &ServConn{host:host, port:port,handler: handler}
+func NewConnect(host string, port int,manager ServConnManager) *ServConn {
+    server := &ServConn{host:host, port:port,manager: manager}
     server.conn,_ = base.Connect(host,port)
     return server
 }
 
-func AddNewServFor(host string, port int, handler ServConnHandler) *ServConn{
-    server := NewConnect(host, port, handler)
+func AddNewServFor(host string, port int, manager ServConnManager) *ServConn{
+    server := NewConnect(host, port, manager)
     server.Run()
-    if server != nil {
-        servList.Add(server)
+    if server != nil && manager != nil {
+        manager.OnServConnAdd(server)
     }
     return server
 }
@@ -50,7 +52,7 @@ func GetServConn() *ServConn{
 }
 
 func (this *ServConn)handleData(b []byte) {
-    if this.handler != nil {
+    if this.manager != nil {
         if this.cacheData != nil {
             println("cach not nil")
             this.cacheData = append(this.cacheData,b...)
@@ -58,7 +60,7 @@ func (this *ServConn)handleData(b []byte) {
             println("cache is nil:", len(b))
             this.cacheData = b
         }
-        err := (this.handler).HandleData(this.cacheData)
+        err := (this.manager).HandleData(this.cacheData)
         if err == nil {
             println("finish work")
             this.cacheData = nil
