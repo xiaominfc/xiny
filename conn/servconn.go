@@ -29,7 +29,7 @@ func NewConnect(host string, port int,manager ServConnManager) *ServConn {
     return server
 }
 
-func AddNewServFor(host string, port int, manager ServConnManager) *ServConn{
+func AddNewServConnFor(host string, port int, manager ServConnManager) *ServConn{
     server := NewConnect(host, port, manager)
     server.Run()
     if server != nil && manager != nil {

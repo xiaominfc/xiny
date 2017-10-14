@@ -10,7 +10,10 @@ import (
     "fmt"
 	"time"
     "math/rand"
+    "log"
 )
+
+import proto "github.com/golang/protobuf/proto"
 
 type Manager struct{
     ServConnList utils.Array
@@ -40,6 +43,15 @@ func (manager *Manager) NewConn(conn *net.TCPConn){
 
 func (manager *Manager) HandleData(b []byte) error {
    fmt.Println(len(b))
+   pdu := base.ReadPdu(b)
+   if pdu != nil {
+        println("serviceId:",pdu.GetServiceId(), "  commandId:",pdu.GetCommandId())
+        if pdu.GetCommandId() == 260 {
+            loginRes := &IM_Login.IMLoginRes{}
+            proto.Unmarshal(pdu.GetBodyData(), loginRes)
+            println(*loginRes.ResultCode)
+        }
+   }
    return nil
 }
 
@@ -60,33 +72,46 @@ func (manager *Manager) GetServConn() *conn.ServConn {
 
 
 func main() {
-
+    onlineStatus := IM_BaseDefine.UserStatType_USER_STATUS_ONLINE
+    clientType := IM_BaseDefine.ClientType_CLIENT_TYPE_WINDOWS
     loginReq := &IM_Login.IMLoginReq{
-        UserName:utils.NewString("xiaominfc"),
-        Password:utils.NewString("test"),
-        OnlineStatus:&IM_BaseDefine.UserStatType.UserStatType_USER_STATUS_ONLINE}
+        UserName:proto.String("xiaominfc"),
+        Password:proto.String("test"),
+        OnlineStatus:&onlineStatus,
+        ClientType:&clientType}
 
-    println(loginReq)
+    out, err := proto.Marshal(loginReq)
+    if err != nil {
+        log.Fatalln("Failed to encode:", err)
+    } else {
+        println("out size:",len(out))
+    }
+
+    pdu := base.NewPdu();
+    pdu.SetServiceId(int16(IM_BaseDefine.ServiceID_SID_LOGIN))
+    pdu.SetCommandId(int16(IM_BaseDefine.LoginCmdID_CID_LOGIN_REQ_USERLOGIN))
+    pdu.SetSeqNum(100)
+    pdu.Write(out)
 
     test := func (){
         println("hello")
     }
+
     utils.AddTask(2*time.Second, test)
     manager := &Manager{}
     manager.ServConnList = utils.NewArray()
     server := base.NewTcpServer("0.0.0.0",9090, manager)
     go server.Start()
     time.Sleep(2 * time.Second)
-    conn.AddNewServFor("127.0.0.1",9090,manager)
-
-    println(time.Second)
+    conn.AddNewServConnFor("im.xiaominfc.com",8000,manager)    
+//  println(time.Second)
 	client,_ := base.Connect("127.0.0.1", 9090)
-	client.Send([]byte{'h','e','r'})
+    manager.GetServConn().Send(pdu.GetBufferData())
 
     for i:=0; i < 20 ; i++ {
         time.Sleep(2 * time.Second)
         client.Send([]byte{'h','e','r'})
-        manager.GetServConn().Send([]byte{'h','e','r'})
+        //manager.GetServConn().Send([]byte{'h','e','r'})
     }
 	//client.Reciv(make([]byte, 100))
 }

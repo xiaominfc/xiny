@@ -64,16 +64,32 @@ func (this *Pdu)GetBufferData() []byte{
     return this.bufferData
 }
 
+func (this *Pdu)GetBodyData()[]byte {
+    return this.bufferData[16:]
+}
+
 func (this *Pdu)SetServiceId(serviceId int16) {
-    this.header.serviceId = serviceId;
+    this.header.serviceId = serviceId
 }
 
 func (this *Pdu)GetServiceId() int16 {
     return this.header.serviceId
 }
 
+func (this *Pdu)SetCommandId(commandId int16) {
+    this.header.commandId = commandId
+}
+
 func (this *Pdu)GetCommandId() int16 {
     return this.header.commandId
+}
+
+func (this *Pdu)SetSeqNum(seqNum int16) {
+    this.header.seqNum = seqNum
+}
+
+func (this *Pdu)GetSeqNum() int16{
+    return this.header.seqNum
 }
 
 func ReadPdu(buffer []byte) *Pdu {
