@@ -19,7 +19,7 @@ func NewTcpServer(host string, port int,manager iface.Manager) *Server {
 }
 
 func (ser *Server) handleConn(conn *net.TCPConn) {
-   //println("new connct")
+   
    if ser.manager != nil {
        ser.manager.NewConn(conn)
    }

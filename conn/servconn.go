@@ -2,6 +2,8 @@ package conn
 
 import(
     "github.com/xiaominfc/xiny/base"
+    "github.com/xiaominfc/xiny/utils"
+    "math/rand"
 )
 
 
@@ -12,6 +14,11 @@ type ServConnManager interface {
     OnServConnAdd(server *ServConn)
     GetServConn() *ServConn
 }
+
+type PduHandler interface {
+    HandlePdu(pdu *base.Pdu)
+}
+
 
 type ServConn struct {
     conn *base.BConn
@@ -56,27 +63,12 @@ func (this *ServConn)handleData(b []byte) {
     }
 }
 
+func (this *ServConn) OnDataReaded(data []byte, err error) {
+    this.handleData(data)
+}
+
 func (this *ServConn) OnRead() {
-    tmp_buf :=  make([]byte, CACHESIZE)
-    buf := make([]byte, 0, 4096)
-    buffer_size := 0
-    for {
-        count,err := this.conn.Reciv(tmp_buf)
-        if count > 0 {
-            buf = append(buf, tmp_buf[:count]...)
-            buffer_size = buffer_size + count;
-        }
-
-        if err != nil || count < 4096 {
-            if buffer_size > 0 {
-                data := append([]byte(nil), buf...)
-                this.handleData(data)
-                buf = buf[:0]
-                buffer_size = 0
-
-            }
-        }
-    }
+    base.OnRead(this.conn,this)
 }
 
 func (this *ServConn) Run() {
@@ -89,5 +81,37 @@ func (this *ServConn) Send(b []byte) {
     }()
 }
 
+type DefaultManager struct{
+    ServConnList utils.Array
+    handler   PduHandler
+}
+
+func NewDefaultManager(handler PduHandler) *DefaultManager {
+    manager := &DefaultManager{handler:handler}
+    manager.ServConnList = utils.NewArray()
+    return manager
+}
+
+func (manager *DefaultManager) HandleData(b []byte) error {
+    pdu := base.ReadPdu(b)
+    if pdu != nil {
+        manager.handler.HandlePdu(pdu)
+    }
+    return nil
+}
+
+func (manager *DefaultManager) OnServConnAdd(servconn *ServConn) {
+    manager.ServConnList.Add(servconn)
+}
+
+func (manager *DefaultManager) GetServConn() *ServConn {
+    size := manager.ServConnList.Size()
+    index := rand.Intn(size)
+    server,err := manager.ServConnList.Get(index)
+    if err!=nil {
+
+    }
+    return server.(*ServConn)
+}
 
 

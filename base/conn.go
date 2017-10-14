@@ -5,10 +5,16 @@ import(
     "fmt"
     "log"
 )
+const CACHESIZE = 1024
 
 type BConn struct{
     Conn *net.TCPConn
 }
+
+type IConnIO interface {
+    OnDataReaded(b []byte, err error)
+}
+
 
 func Connect(host string, port int) (*BConn,error) {
     laddr, err := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", host,port))
@@ -31,4 +37,30 @@ func (this *BConn) Send(b []byte) (int, error){
 func (this *BConn) Reciv(b []byte) (int, error) {
     return this.Conn.Read(b)
 }
+
+func OnRead(conn *BConn, connIO IConnIO) {
+    tmp_buf :=  make([]byte, CACHESIZE)
+    buf := make([]byte, 0, 4096)
+    buffer_size := 0
+    for {
+        count,err := conn.Reciv(tmp_buf)
+        if count > 0 {
+            buf = append(buf, tmp_buf[:count]...)
+            buffer_size = buffer_size + count;
+        }
+
+        if err != nil || count < 4096 {
+            if buffer_size > 0 {
+                data := append([]byte(nil), buf...)
+                //this.handleData(data)
+                connIO.OnDataReaded(data,nil)
+                buf = buf[:0]
+                buffer_size = 0
+            }else {
+
+            }
+        }
+    }
+}
+
 

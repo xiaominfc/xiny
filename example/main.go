@@ -7,67 +7,30 @@ import (
     "github.com/xiaominfc/xiny/pb/IM_Login"
     "github.com/xiaominfc/xiny/pb/IM_BaseDefine"
     "net"
-    "fmt"
+    // "fmt"
 	"time"
-    "math/rand"
     "log"
 )
 
 import proto "github.com/golang/protobuf/proto"
 
 type Manager struct{
-    ServConnList utils.Array
+
 }
 
-func (manager *Manager) NewConn(conn *net.TCPConn){
+func (manager *Manager) NewConn(tcpConn *net.TCPConn){
     println("new connect");
-    tmp_buf :=  make([]byte, 256)
-    buf := make([]byte, 0, 4096)
-    client := &base.BConn{Conn:conn}
-    for {
-        count,err := client.Reciv(tmp_buf)
-        println("reciv count:", count)
-        buf = append(buf, tmp_buf[:count]...)
-        if err != nil || count < 256 {
-            println("read error")
-            client.Send(buf)
-            buf = buf[:0]
- //           break
-        }
-
-    }
-    fmt.Println("read size:",len(buf))
-    fmt.Println(string(buf[:len(buf)]))
+    client := conn.NewClientConn(&base.BConn{Conn:tcpConn},manager)
+    client.Run()
 }
 
-
-func (manager *Manager) HandleData(b []byte) error {
-   fmt.Println(len(b))
-   pdu := base.ReadPdu(b)
-   if pdu != nil {
-        println("serviceId:",pdu.GetServiceId(), "  commandId:",pdu.GetCommandId())
-        if pdu.GetCommandId() == 260 {
-            loginRes := &IM_Login.IMLoginRes{}
-            proto.Unmarshal(pdu.GetBodyData(), loginRes)
-            println(*loginRes.ResultCode)
-        }
-   }
-   return nil
+func (manager *Manager)HandlePdu(pdu *base.Pdu){
+    println("HandlePdu")
 }
 
-func (manager *Manager) OnServConnAdd(servconn *conn.ServConn) {
-    println("add new servConn")
-    manager.ServConnList.Add(servconn)
-}
-
-func (manager *Manager) GetServConn() *conn.ServConn {
-    size := manager.ServConnList.Size()
-    index := rand.Intn(size)
-    server,err := manager.ServConnList.Get(index)
-    if err!=nil {
-
-    }
-    return server.(*conn.ServConn)
+func (manager *Manager)HandleData(data []byte,conn *conn.ClientConn) error{
+    println("HandleData:",len(data))
+    return nil
 }
 
 
@@ -99,14 +62,14 @@ func main() {
 
     utils.AddTask(2*time.Second, test)
     manager := &Manager{}
-    manager.ServConnList = utils.NewArray()
+    connManager := conn.NewDefaultManager(manager)
     server := base.NewTcpServer("0.0.0.0",9090, manager)
     go server.Start()
     time.Sleep(2 * time.Second)
-    conn.AddNewServConnFor("im.xiaominfc.com",8000,manager)    
+    conn.AddNewServConnFor("im.xiaominfc.com",8000,connManager)
 //  println(time.Second)
 	client,_ := base.Connect("127.0.0.1", 9090)
-    manager.GetServConn().Send(pdu.GetBufferData())
+    connManager.GetServConn().Send(pdu.GetBufferData())
 
     for i:=0; i < 20 ; i++ {
         time.Sleep(2 * time.Second)
