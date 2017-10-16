@@ -4,7 +4,6 @@ import (
     "github.com/xiaominfc/xiny/base"
     "github.com/xiaominfc/xiny/conn"
     "github.com/xiaominfc/xiny/ylog"
-    "github.com/xiaominfc/xiny/pb/IM_Login"
     "github.com/xiaominfc/xiny/pb/IM_BaseDefine"
     "github.com/xiaominfc/xiny/pb/IM_Group"
     "github.com/xiaominfc/xiny/pb/IM_Other"
@@ -13,7 +12,7 @@ import (
     "bufio"
     "bytes"
     // "time"
-    "log"
+    // "log"
     "fmt"
     "io/ioutil"
     "encoding/json"
@@ -40,6 +39,9 @@ var ResultMsgMap = map[uint32]string{
     11 : "更改群成员失败",
     12 : "消息加密失败"}
 
+func SimpleErrorMsg(resultCode int, msg string) string{
+    return fmt.Sprintf("{\"error_code\":%d,\"error_msg\":\"%s\"}",resultCode,msg)
+}
 
 type Manager struct{
     clientMap map[int64]*conn.ClientConn
@@ -52,7 +54,7 @@ func (manager *Manager) NewConn(tcpConn *net.TCPConn){
     client.Run()
     fd := client.GetSocketFd()
     if fd > 0 {
-        println("add client:",fd)
+        ylog.ILog("add client:",fd)
         manager.clientMap[fd] = client
     }
 }
@@ -110,8 +112,23 @@ type CreateGroupReq struct {
 func (manager *Manager)DoCreateGroup(postData []byte, client *conn.ClientConn){
     var reqData CreateGroupReq
     err := json.Unmarshal(postData,&reqData)
+    
+    errMsg := ""
     if err != nil {
         ylog.ILog(err.Error())
+        errMsg = SimpleErrorMsg(1,err.Error())
+    } else if len(reqData.GroupName) == 0 {
+        errMsg = SimpleErrorMsg(1,"no group_name")
+    } else if len(reqData.GroupAvatar) == 0 {
+        errMsg = SimpleErrorMsg(1,"no group_avatar")
+    } else if len(reqData.MemberIdList) == 0 {
+        errMsg = SimpleErrorMsg(1,"user_id_list is empty")
+    }
+
+    if len(errMsg) != 0 {
+        outData := fmt.Sprintf(HTTP_QUEYR_HEADER, len(errMsg) , errMsg);
+        client.Send([]byte(outData))
+        client.Close()
         return
     }
 
@@ -145,7 +162,7 @@ func (manager *Manager)DoResponseForCreateGroup(pdu *base.Pdu){
 
     attach := base.NewAttachDataForData(res.AttachData)
     resultCode := *res.ResultCode
-    result := fmt.Sprintf("{\"error_code\":%d,\"error_msg\":\"%s\"}",resultCode,ResultMsgMap[resultCode])
+    result := SimpleErrorMsg(int(resultCode),ResultMsgMap[resultCode])
     outData := fmt.Sprintf(HTTP_QUEYR_HEADER, len(result) , result);
     //println(outData)
     clientConn := manager.clientMap[int64(attach.GetHandle()) - 1]
@@ -164,10 +181,24 @@ func (manager *Manager)DoChangeMembers(postData []byte, client *conn.ClientConn)
     ylog.ILog("DoChangeMembers")
     var reqData ChangeMemberReq
     err := json.Unmarshal(postData,&reqData)
+    errMsg := ""
     if err != nil {
         ylog.ILog(err.Error())
+        errMsg = SimpleErrorMsg(1,err.Error())
+    } else if reqData.GroupId == 0 {
+        errMsg = SimpleErrorMsg(1,"no group_id")
+    } else if len(reqData.MemberIdList) == 0 {
+        errMsg = SimpleErrorMsg(1,"user_id_list is empty")
+    }
+
+    if len(errMsg) != 0 {
+        outData := fmt.Sprintf(HTTP_QUEYR_HEADER, len(errMsg) , errMsg);
+        client.Send([]byte(outData))
+        client.Close()
         return
     }
+
+    ylog.ILog("DoChangeMembers:",reqData.GroupId)
     dbConn := manager.DbConnManager.GetServConn()
     req := &IM_Group.IMGroupChangeMemberReq{UserId:proto.Uint32(0),ChangeType:&reqData.ChangeType,GroupId:proto.Uint32(reqData.GroupId),MemberIdList:reqData.MemberIdList}
     attach := base.NewAttachData(3,uint32(client.GetSocketFd()),0)
@@ -197,7 +228,7 @@ func (manager *Manager)DoResponseForChangeMember(pdu *base.Pdu){
     }
     attach := base.NewAttachDataForData(res.AttachData)
     resultCode := *res.ResultCode
-    result := fmt.Sprintf("{\"error_code\":%d,\"error_msg\":\"%s\"}",resultCode,ResultMsgMap[resultCode])
+    result := SimpleErrorMsg(int(resultCode),ResultMsgMap[resultCode])
     outData := fmt.Sprintf(HTTP_QUEYR_HEADER, len(result) , result);
     println(outData)
     clientConn := manager.clientMap[int64(attach.GetHandle()) - 1]
@@ -260,27 +291,6 @@ func (manager *Manager)HandleData(data []byte,client *conn.ClientConn) error{
 
 
 func main() {
-    onlineStatus := IM_BaseDefine.UserStatType_USER_STATUS_ONLINE
-    clientType := IM_BaseDefine.ClientType_CLIENT_TYPE_WINDOWS
-    loginReq := &IM_Login.IMLoginReq{
-        UserName:proto.String("xiaominfc"),
-        Password:proto.String("test"),
-        OnlineStatus:&onlineStatus,
-        ClientType:&clientType}
-
-    out, err := proto.Marshal(loginReq)
-    if err != nil {
-        log.Fatalln("Failed to encode:", err)
-    } else {
-        println("out size:",len(out))
-    }
-
-    pdu := base.NewPdu();
-    pdu.SetServiceId(int16(IM_BaseDefine.ServiceID_SID_LOGIN))
-    pdu.SetCommandId(int16(IM_BaseDefine.LoginCmdID_CID_LOGIN_REQ_USERLOGIN))
-    pdu.SetSeqNum(100)
-    pdu.Write(out)
-
     manager := NewManager()
     connManager := conn.NewDefaultManager(manager)
     rConnManager := conn.NewDefaultManager(manager)
