@@ -2,7 +2,6 @@ package main
 
 import (
     "github.com/xiaominfc/xiny/base"
-    //"github.com/xiaominfc/xiny/utils"
     "github.com/xiaominfc/xiny/conn"
     "github.com/xiaominfc/xiny/ylog"
     "github.com/xiaominfc/xiny/pb/IM_Login"
@@ -13,7 +12,7 @@ import (
     "net/http"
     "bufio"
     "bytes"
-    "time"
+    // "time"
     "log"
     "fmt"
     "io/ioutil"
@@ -24,6 +23,23 @@ import (
 import proto "github.com/golang/protobuf/proto"
 
 const HTTP_QUEYR_HEADER = "HTTP/1.1 200 OK\r\nCache-Control:no-cache\r\nConnection:close\r\nContent-Length:%d\r\nContent-Type:text/html;charset=utf-8\r\n\r\n%s"
+
+
+var ResultMsgMap = map[uint32]string{
+    0  : "成功",
+    1  : "参数错误",
+    2  : "appKey不存在",
+    3  : "appKey与用户不匹配",
+    4  : "含有不允许发送的Id",
+    5  : "未授权的接口",
+    6  : "未授权的IP",
+    7  : "非法的发送类型",
+    8  : "未知错误",
+    9  : "服务器异常",
+    10 : "创建群失败",
+    11 : "更改群成员失败",
+    12 : "消息加密失败"}
+
 
 type Manager struct{
     clientMap map[int64]*conn.ClientConn
@@ -126,7 +142,7 @@ func (manager *Manager)DoResponseForCreateGroup(pdu *base.Pdu){
 
     attach := base.NewAttachDataForData(res.AttachData)
     resultCode := *res.ResultCode
-    result := fmt.Sprintf("{\"error_code\":%d,\"error_msg\":\"ok\"}",resultCode)
+    result := fmt.Sprintf("{\"error_code\":%d,\"error_msg\":\"%s\"}",resultCode,ResultMsgMap[resultCode])
     outData := fmt.Sprintf(HTTP_QUEYR_HEADER, len(result) , result);
     //println(outData)
     clientConn := manager.clientMap[int64(attach.GetHandle()) - 1]
@@ -178,7 +194,7 @@ func (manager *Manager)DoResponseForChangeMember(pdu *base.Pdu){
     }
     attach := base.NewAttachDataForData(res.AttachData)
     resultCode := *res.ResultCode
-    result := fmt.Sprintf("{\"error_code\":%d,\"error_msg\":\"ok\"}",resultCode)
+    result := fmt.Sprintf("{\"error_code\":%d,\"error_msg\":\"%s\"}",resultCode,ResultMsgMap[resultCode])
     outData := fmt.Sprintf(HTTP_QUEYR_HEADER, len(result) , result);
     println(outData)
     clientConn := manager.clientMap[int64(attach.GetHandle()) - 1]
@@ -199,8 +215,6 @@ func (manager *Manager)DoResponseForChangeMember(pdu *base.Pdu){
         }else {
             ylog.ILog(err.Error())
         }
-
-
     }
 }
 
@@ -269,19 +283,8 @@ func main() {
     rConnManager := conn.NewDefaultManager(manager)
     manager.DbConnManager = connManager
     manager.RConnManager = rConnManager
-    server := base.NewTcpServer("0.0.0.0",9090, manager)
-    go server.Start()
-    time.Sleep(2 * time.Second)
     conn.AddNewServConnFor("im.xiaominfc.com",10600,connManager)
     conn.AddNewServConnFor("im.xiaominfc.com",8200,rConnManager)
-//  println(time.Second)
-    //client,_ := base.Connect("127.0.0.1", 9090)
-    //connManager.GetServConn().Send(pdu.GetBufferData())
-
-    for i:=0; i < 200 ; i++ {
-        time.Sleep(2 * time.Second)
-         //client.Send([]byte{'h','e','r'})
-        //manager.GetServConn().Send([]byte{'h','e','r'})
-    }
-    //client.Reciv(make([]byte, 100))
+    server := base.NewTcpServer("0.0.0.0",9090, manager)
+    server.Start()
 }

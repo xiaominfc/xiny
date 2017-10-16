@@ -103,7 +103,7 @@ func NewDefaultManager(handler PduHandler) *DefaultManager {
 func (this *DefaultManager) HandleData(b []byte) error {
     pdu := base.ReadPdu(b)
     if pdu != nil && this.handler != nil {
-        this.handler.HandlePdu(pdu,this)
+        go this.handler.HandlePdu(pdu,this)
     }
     return nil
 }
