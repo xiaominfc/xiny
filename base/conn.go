@@ -34,8 +34,20 @@ func (this *BConn) Send(b []byte) (int, error){
     return this.Conn.Write(b)
 }
 
+func (this *BConn) Close(){
+    this.Conn.Close()
+}
+
 func (this *BConn) Reciv(b []byte) (int, error) {
     return this.Conn.Read(b)
+}
+
+func (this *BConn) GetFd() (int64 , error){
+    file,err := this.Conn.File()
+    if err != nil {
+        return 0, err
+    }
+    return int64(file.Fd()) , nil
 }
 
 func OnRead(conn *BConn, connIO IConnIO) {

@@ -15,13 +15,21 @@ type PduHeader struct {
     reversed   int16
 }
 
+func writeUInt32(b []byte,index int,value uint32) {
+    _ = b[3 + index]
+    b[0 + index] = byte(value >> 24)
+    b[1 + index] = byte(value >> 16)
+    b[2 + index] = byte(value >> 8)
+    b[3 + index] = byte(value)
+}
+
+
 func writeInt32(b []byte,index int,value int32) {
     _ = b[3 + index]
     b[0 + index] = byte(value >> 24)
     b[1 + index] = byte(value >> 16)
     b[2 + index] = byte(value >> 8)
     b[3 + index] = byte(value)
-
 }
 
 func writeInt16(b []byte,index int,value int16) {
@@ -114,4 +122,48 @@ func ReadPdu(buffer []byte) *Pdu {
     pdu.bufferData = append(pdu.bufferData, buffer...)
     return pdu
 }
+
+
+type AttachData struct {
+    Type    uint32
+    Handle  uint32
+    ServiceType uint32
+    Data    []byte
+}
+
+
+func NewAttachData(typeV uint32, handle uint32, serviceType uint32) *AttachData {
+    attachData := &AttachData{Type: typeV, Handle: handle, ServiceType: serviceType}
+ //   attachData.Serialization()
+    return attachData
+}
+
+
+func NewAttachDataForData(data []byte) *AttachData{
+   attachData := &AttachData{} 
+   reader := bytes.NewReader(data);
+   binary.Read(reader, binary.BigEndian, &attachData.Type)
+   binary.Read(reader, binary.BigEndian, &attachData.Handle)
+   binary.Read(reader, binary.BigEndian, &attachData.ServiceType)
+   return attachData
+}
+
+func (this *AttachData)Serialization() {
+    this.Data = make([]byte,12)
+    writeUInt32(this.Data, 0, this.Type)
+    writeUInt32(this.Data, 4, this.Handle)
+    writeUInt32(this.Data, 8, this.ServiceType)
+}
+
+func (this *AttachData)GetBufferData() []byte{
+    this.Serialization()
+    return this.Data
+}
+
+
+func (this *AttachData)GetHandle() uint32 {
+    return this.Handle
+}
+
+
 

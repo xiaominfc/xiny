@@ -4,6 +4,7 @@ import(
     "github.com/xiaominfc/xiny/base"
     "github.com/xiaominfc/xiny/utils"
     "math/rand"
+    "time"
 )
 
 
@@ -13,10 +14,12 @@ type ServConnManager interface {
     HandleData(b []byte) error
     OnServConnAdd(server *ServConn)
     GetServConn() *ServConn
+    OnTimeForServConn(server *ServConn)
 }
 
 type PduHandler interface {
-    HandlePdu(pdu *base.Pdu)
+    HandlePdu(pdu *base.Pdu, servConnManager ServConnManager)
+    OnTimeWork(servConn *ServConn, servConnManager ServConnManager)
 }
 
 
@@ -71,8 +74,13 @@ func (this *ServConn) OnRead() {
     base.OnRead(this.conn,this)
 }
 
+func (this *ServConn) OnTime() {
+    this.manager.OnTimeForServConn(this)
+}
+
 func (this *ServConn) Run() {
     go this.OnRead()
+    utils.AddTask(5*time.Second, this.OnTime)
 }
 
 func (this *ServConn) Send(b []byte) {
@@ -92,22 +100,29 @@ func NewDefaultManager(handler PduHandler) *DefaultManager {
     return manager
 }
 
-func (manager *DefaultManager) HandleData(b []byte) error {
+func (this *DefaultManager) HandleData(b []byte) error {
     pdu := base.ReadPdu(b)
-    if pdu != nil {
-        manager.handler.HandlePdu(pdu)
+    if pdu != nil && this.handler != nil {
+        this.handler.HandlePdu(pdu,this)
     }
     return nil
 }
 
 func (manager *DefaultManager) OnServConnAdd(servconn *ServConn) {
+    println("new server connect ok")
     manager.ServConnList.Add(servconn)
 }
 
-func (manager *DefaultManager) GetServConn() *ServConn {
-    size := manager.ServConnList.Size()
+func (this *DefaultManager) OnTimeForServConn(servconn *ServConn) {
+    if this.handler != nil {
+        this.handler.OnTimeWork(servconn, this)    
+    }
+}
+
+func (this *DefaultManager) GetServConn() *ServConn {
+    size := this.ServConnList.Size()
     index := rand.Intn(size)
-    server,err := manager.ServConnList.Get(index)
+    server,err := this.ServConnList.Get(index)
     if err!=nil {
 
     }
