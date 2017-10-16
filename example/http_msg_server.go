@@ -75,6 +75,9 @@ func (manager *Manager)OnTimeWork(servConn *conn.ServConn, servConnManager conn.
 }
 
 func (manager *Manager)HandlePdu(pdu *base.Pdu, connManager conn.ServConnManager){
+    if connManager == manager.RConnManager {
+        return
+    }
     //println("pdu for:",pdu.GetCommandId())
     switch int32(pdu.GetCommandId()) {
     case int32(IM_BaseDefine.OtherCmdID_CID_OTHER_HEARTBEAT):
