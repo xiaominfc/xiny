@@ -5,6 +5,8 @@ import(
     "github.com/xiaominfc/xiny/utils"
     "math/rand"
     "time"
+    "fmt"
+    "errors"
 )
 
 
@@ -102,10 +104,14 @@ func NewDefaultManager(handler PduHandler) *DefaultManager {
 
 func (this *DefaultManager) HandleData(b []byte) error {
     pdu := base.ReadPdu(b)
-    if pdu != nil && this.handler != nil {
-        go this.handler.HandlePdu(pdu,this)
+    if pdu != nil {
+        fmt.Println(b[:16])
+        if(this.handler != nil) {
+            go this.handler.HandlePdu(pdu,this)    
+        }
+        return nil
     }
-    return nil
+    return errors.New("")
 }
 
 func (manager *DefaultManager) OnServConnAdd(servconn *ServConn) {
@@ -121,10 +127,13 @@ func (this *DefaultManager) OnTimeForServConn(servconn *ServConn) {
 
 func (this *DefaultManager) GetServConn() *ServConn {
     size := this.ServConnList.Size()
+    if(size == 0) {
+        return nil
+    }
     index := rand.Intn(size)
     server,err := this.ServConnList.Get(index)
-    if err!=nil {
-
+    if err != nil {
+        return nil
     }
     return server.(*ServConn)
 }
