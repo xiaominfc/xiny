@@ -14,7 +14,11 @@ type CacheConn struct{
 
 
 func NewCacheConn(addr,password string,dbIndex int) *CacheConn {    
-    return &CacheConn{Addr:addr, Password:password,DB:dbIndex}
+    conn :=  &CacheConn{Addr:addr, Password:password,DB:dbIndex}
+    if conn.Init() {
+        println("connect redis ok")
+    }
+    return conn
 }
 
 func (this *CacheConn) Init() bool {
