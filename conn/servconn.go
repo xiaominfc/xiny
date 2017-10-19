@@ -5,7 +5,6 @@ import(
     "github.com/xiaominfc/xiny/utils"
     "math/rand"
     "time"
-    "fmt"
     "errors"
 )
 
@@ -54,15 +53,12 @@ func AddNewServConnFor(host string, port int, manager ServConnManager) *ServConn
 func (this *ServConn)handleData(b []byte) {
     if this.manager != nil {
         if this.cacheData != nil {
-            println("cach not nil")
             this.cacheData = append(this.cacheData,b...)
         }else {
-            println("cache is nil:", len(b))
             this.cacheData = b
         }
         err := (this.manager).HandleData(this.cacheData)
         if err == nil {
-            println("finish work")
             this.cacheData = nil
         }
     }
@@ -105,7 +101,6 @@ func NewDefaultManager(handler PduHandler) *DefaultManager {
 func (this *DefaultManager) HandleData(b []byte) error {
     pdu := base.ReadPdu(b)
     if pdu != nil {
-        fmt.Println(b[:16])
         if(this.handler != nil) {
             go this.handler.HandlePdu(pdu,this)    
         }
