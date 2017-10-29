@@ -14,7 +14,6 @@ type ClientConnManager interface {
     OnClose(conn *ClientConn)
 }
 
-
 func NewClientConn(connection *base.BConn,manager ClientConnManager) *ClientConn{
     return &ClientConn{connection:connection, manager: manager}
 }
@@ -32,6 +31,11 @@ func (this *ClientConn) OnDataReaded(data []byte, err error) {
 }
 
 func (this *ClientConn) Send(b []byte) {
+    if this.connection == nil {
+        this.Close()
+        return
+    }
+
     _,err := this.connection.Send(b)
     if err != nil {
         this.Close()
@@ -52,6 +56,8 @@ func (this *ClientConn) Run() {
 }
 
 func (this *ClientConn) Close() {
-    this.connection.Close()
+    if this.connection != nil {
+        this.connection.Close()    
+    }
     this.manager.OnClose(this)
 }
