@@ -76,6 +76,10 @@ func (this *ServConn) OnTime() {
     this.manager.OnTimeForServConn(this)
 }
 
+func (this *ServConn) Close() {
+    this.conn.Close()
+}
+
 func (this *ServConn) Run() {
     go this.OnRead()
     utils.AddTask(5*time.Second, this.OnTime)

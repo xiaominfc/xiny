@@ -4,6 +4,7 @@ import(
     "net"
     "fmt"
     "log"
+    "io"
 )
 const CACHESIZE = 1024
 
@@ -13,6 +14,7 @@ type BConn struct{
 
 type IConnIO interface {
     OnDataReaded(b []byte, err error)
+    Close()
 }
 
 
@@ -72,7 +74,10 @@ func OnRead(conn *BConn, connIO IConnIO) {
 
             }
         }
+
+        if err != nil && err != io.EOF {
+            connIO.Close()
+            break
+        }
     }
 }
-
-
