@@ -4,7 +4,6 @@ import(
     "net"
     "fmt"
     "log"
-    "io"
 )
 const CACHESIZE = 1024
 
@@ -62,7 +61,7 @@ func OnRead(conn *BConn, connIO IConnIO) {
             buf = append(buf, tmp_buf[:count]...)
             buffer_size = buffer_size + count;
         }
-        
+
         if err != nil || count < 4096 {
             if buffer_size > 0 {
                 data := append([]byte(nil), buf...)
