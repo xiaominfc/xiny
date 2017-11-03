@@ -62,7 +62,7 @@ func OnRead(conn *BConn, connIO IConnIO) {
             buf = append(buf, tmp_buf[:count]...)
             buffer_size = buffer_size + count;
         }
-
+        
         if err != nil || count < 4096 {
             if buffer_size > 0 {
                 data := append([]byte(nil), buf...)
@@ -75,9 +75,9 @@ func OnRead(conn *BConn, connIO IConnIO) {
             }
         }
 
-        if err != nil && err != io.EOF {
+        if err != nil{
             connIO.Close()
-            break
+            return
         }
     }
 }
