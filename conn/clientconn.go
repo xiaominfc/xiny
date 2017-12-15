@@ -60,10 +60,11 @@ func (this *ClientConn) Run() {
 }
 
 func (this *ClientConn) Close() {
+    println("close", this.GetSocketFd())
     if this == nil {
         return
     }
-    
+
     if this.connection != nil {
         this.connection.Close()
     }
