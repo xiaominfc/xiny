@@ -4,11 +4,14 @@ import(
     "net"
     "fmt"
     "log"
+    "reflect"
+    "strconv"
 )
 const CACHESIZE = 1024
 
 type BConn struct{
     Conn *net.TCPConn
+    socketFd int
 }
 
 type IConnIO interface {
@@ -16,6 +19,10 @@ type IConnIO interface {
     Close()
 }
 
+
+func NewBaseConn(conn *net.TCPConn)*BConn{
+    return &BConn{Conn:tcpConn,socketFd:0}
+}
 
 func Connect(host string, port int) (*BConn,error) {
     laddr, err := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", host,port))
@@ -44,11 +51,12 @@ func (this *BConn) Reciv(b []byte) (int, error) {
 }
 
 func (this *BConn) GetFd() (int64 , error){
-    file,err := this.Conn.File()
-    if err != nil {
-        return 0, err
-    }
-    return int64(file.Fd()) , nil
+    this_conn_r := reflect.ValueOf(this.Conn)
+    tcp_conn := this_conn_r.Elem().FieldByName("conn")
+    conn_r = reflect.ValueOf(tcp_conn)
+    x := conn_r.Elem().FieldByName("n")
+    i, _ := strconv.ParseInt(x, 10, 64)
+    return i, nil
 }
 
 func OnRead(conn *BConn, connIO IConnIO) {
