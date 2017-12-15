@@ -60,7 +60,7 @@ func (this *ClientConn) Run() {
 }
 
 func (this *ClientConn) Close() {
-    if this.connection != nil {
+    if this && this.connection != nil {
         this.connection.Close()
     }
     this.manager.OnClose(this)
