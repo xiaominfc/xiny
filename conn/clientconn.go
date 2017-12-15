@@ -31,6 +31,10 @@ func (this *ClientConn) OnDataReaded(data []byte, err error) {
 }
 
 func (this *ClientConn) Send(b []byte) {
+    if this == nil {
+        return
+    }
+
     if this.connection == nil {
         this.Close()
         return
@@ -57,7 +61,7 @@ func (this *ClientConn) Run() {
 
 func (this *ClientConn) Close() {
     if this.connection != nil {
-        this.connection.Close()    
+        this.connection.Close()
     }
     this.manager.OnClose(this)
 }

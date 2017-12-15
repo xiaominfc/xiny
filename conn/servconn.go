@@ -120,7 +120,7 @@ func (manager *DefaultManager) OnServConnAdd(servconn *ServConn) {
 
 func (this *DefaultManager) OnTimeForServConn(servconn *ServConn) {
     if this.handler != nil {
-        this.handler.OnTimeWork(servconn, this)    
+        this.handler.OnTimeWork(servconn, this)
     }
 }
 

@@ -112,7 +112,7 @@ type CreateGroupReq struct {
 func (manager *Manager)DoCreateGroup(postData []byte, client *conn.ClientConn){
     var reqData CreateGroupReq
     err := json.Unmarshal(postData,&reqData)
-    
+
     errMsg := ""
     if err != nil {
         ylog.ILog(err.Error())
