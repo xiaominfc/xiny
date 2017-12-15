@@ -18,55 +18,45 @@ func NewClientConn(connection *base.BConn,manager ClientConnManager) *ClientConn
     return &ClientConn{connection:connection, manager: manager}
 }
 
-func (clientConn *ClientConn)GetConn() *base.BConn {
-    return clientConn.connection
+func (this *ClientConn)GetConn() *base.BConn {
+    return this.connection
 }
 
-func (clientConn *ClientConn)handleData(data []byte) {
-    clientConn.manager.HandleData(data,clientConn)
+func (this *ClientConn)handleData(data []byte) {
+    this.manager.HandleData(data,this)
 }
 
-func (clientConn *ClientConn) OnDataReaded(data []byte, err error) {
-    clientConn.handleData(data)
+func (this *ClientConn) OnDataReaded(data []byte, err error) {
+    this.handleData(data)
 }
 
-func (clientConn *ClientConn) Send(b []byte) {
-    if clientConn == nil {
+func (this *ClientConn) Send(b []byte) {
+    if this.connection == nil {
+        this.Close()
         return
     }
-
-    if clientConn.connection == nil {
-        clientConn.Close()
-        return
-    }
-
-    _,err := clientConn.connection.Send(b)
+    _,err := this.connection.Send(b)
     if err != nil {
-        clientConn.Close()
+        this.Close()
     }
 }
 
-func (clientConn *ClientConn) OnRead() {
-    base.OnRead(clientConn.connection,clientConn)
+func (this *ClientConn) OnRead() {
+    base.OnRead(this.connection,this)
 }
 
-func (clientConn *ClientConn) GetSocketFd() int64 {
-    fd,_ := clientConn.connection.GetFd()
+func (this *ClientConn) GetSocketFd() int64 {
+    fd,_ := this.connection.GetFd()
     return fd
 }
 
-func (clientConn *ClientConn) Run() {
-    go clientConn.OnRead()
+func (this *ClientConn) Run() {
+    go this.OnRead()
 }
 
-func (clientConn *ClientConn) Close() {
-    println("close", clientConn.GetSocketFd())
-    if clientConn == nil {
-        return
+func (this *ClientConn) Close() {
+    if this.connection != nil {
+        this.connection.Close()
     }
-
-    if clientConn.connection != nil {
-        clientConn.connection.Close()
-    }
-    clientConn.manager.OnClose(clientConn)
+    this.manager.OnClose(this)
 }
