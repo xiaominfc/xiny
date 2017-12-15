@@ -6,12 +6,13 @@ import(
     "log"
     "reflect"
     "strconv"
+    "strings"
 )
 const CACHESIZE = 1024
 
 type BConn struct{
     Conn *net.TCPConn
-    socketFd int
+    socketFd int64
 }
 
 type IConnIO interface {
@@ -51,12 +52,17 @@ func (this *BConn) Reciv(b []byte) (int, error) {
 }
 
 func (this *BConn) GetFd() (int64 , error){
+    if(this.socketFd > 0 ) {
+        return this.socketFd, nil
+    }
+
     this_conn_r := reflect.ValueOf(this.Conn)
-    tcp_conn := this_conn_r.Elem().FieldByName("conn")
-    conn_r := reflect.ValueOf(tcp_conn)
-    x := conn_r.Elem().FieldByName("n")
-    i, _ := strconv.ParseInt(x.String(), 10, 64)
-    return i, nil
+    tcp_conn := this_conn_r.Elem().FieldByName("fd")
+    value := fmt.Sprintf("%v",tcp_conn)
+    args := strings.Split(value," ")
+    i, _ := strconv.ParseInt(args[3], 10, 64)
+    this.socketFd = i;
+    return this.socketFd, nil
 }
 
 func OnRead(conn *BConn, connIO IConnIO) {
