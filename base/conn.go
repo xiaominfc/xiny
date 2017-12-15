@@ -20,7 +20,7 @@ type IConnIO interface {
 }
 
 
-func NewBaseConn(conn *net.TCPConn)*BConn{
+func NewBaseConn(tcpConn *net.TCPConn)*BConn{
     return &BConn{Conn:tcpConn,socketFd:0}
 }
 
@@ -53,9 +53,9 @@ func (this *BConn) Reciv(b []byte) (int, error) {
 func (this *BConn) GetFd() (int64 , error){
     this_conn_r := reflect.ValueOf(this.Conn)
     tcp_conn := this_conn_r.Elem().FieldByName("conn")
-    conn_r = reflect.ValueOf(tcp_conn)
+    conn_r := reflect.ValueOf(tcp_conn)
     x := conn_r.Elem().FieldByName("n")
-    i, _ := strconv.ParseInt(x, 10, 64)
+    i, _ := strconv.ParseInt(x.String(), 10, 64)
     return i, nil
 }
 
