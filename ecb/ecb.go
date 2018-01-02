@@ -35,7 +35,7 @@ func PaddingData(data []byte,blockSize int) []byte {
     outData[3 + end] = byte(size)
 
     for i:=0 ;i < size ; i++ {
-    	outData[i] = data[i]
+        outData[i] = data[i]
     }
     return outData
 }

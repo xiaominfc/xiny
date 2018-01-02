@@ -50,6 +50,13 @@ func AddNewServConnFor(host string, port int, manager ServConnManager) *ServConn
 }
 
 
+func (this *ServConn)reconnect(){
+    this.conn, err = base.Connect(this.host,this.port)
+    if err != nil {
+        println("reconnect ok:  ",host,":",port)
+    }
+}
+
 func (this *ServConn)handleData(b []byte) {
     if this.manager != nil {
         if this.cacheData != nil {
@@ -87,7 +94,7 @@ func (this *ServConn) Run() {
 
 func (this *ServConn) Send(b []byte) {
     go func() {
-      this.conn.Send(b)
+        this.conn.Send(b)
     }()
 }
 
@@ -106,7 +113,7 @@ func (this *DefaultManager) HandleData(b []byte) error {
     pdu := base.ReadPdu(b)
     if pdu != nil {
         if(this.handler != nil) {
-            go this.handler.HandlePdu(pdu,this)    
+            go this.handler.HandlePdu(pdu,this)
         }
         return nil
     }
