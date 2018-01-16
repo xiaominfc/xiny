@@ -11,9 +11,12 @@ import(
 
 const CACHESIZE = 1024
 
+const RECONNECTMAXTIME = 5
+
 type ServConnManager interface {
     HandleData(b []byte) error
     OnServConnAdd(server *ServConn)
+    OnServConnClose(server *ServConn)
     GetServConn() *ServConn
     OnTimeForServConn(server *ServConn)
 }
@@ -30,12 +33,15 @@ type ServConn struct {
     port int
     manager ServConnManager
     cacheData []byte
+    needReconnet bool
+    reconnectTime int
+    task   *utils.Task
 }
 
 
 
 func NewConnect(host string, port int,manager ServConnManager) *ServConn {
-    server := &ServConn{host:host, port:port,manager: manager}
+    server := &ServConn{host:host, port:port,manager: manager,needReconnet:true, reconnectTime:0}
     server.conn,_ = base.Connect(host,port)
     return server
 }
@@ -51,10 +57,24 @@ func AddNewServConnFor(host string, port int, manager ServConnManager) *ServConn
 
 
 func (this *ServConn)reconnect(){
-    this.conn, err = base.Connect(this.host,this.port)
-    if err != nil {
-        println("reconnect ok:  ",host,":",port)
+    for this.reconnectTime < RECONNECTMAXTIME {
+        time.Sleep(time.Second * 5)
+        conn, err := base.Connect(this.host,this.port)
+        if err != nil {
+            println("reconnect ok:  ",this.host,":",this.port)
+            this.conn = conn
+            this.reconnectTime = 0
+            this.Run()
+            this.manager.OnServConnAdd(this)
+            break
+        }else {
+            this.reconnectTime ++
+        }    
     }
+    println("reconnect failed for:   ",this.host,":", this.port)
+    this.manager = nil
+    this.task.Stop()
+    this.task = nil
 }
 
 func (this *ServConn)handleData(b []byte) {
@@ -85,11 +105,21 @@ func (this *ServConn) OnTime() {
 
 func (this *ServConn) Close() {
     this.conn.Close()
+    this.conn = nil
+    this.manager.OnServConnClose(this) 
+    this.task.Pause()
+    if(this.needReconnet) {
+        go this.reconnect()
+    }
 }
 
 func (this *ServConn) Run() {
     go this.OnRead()
-    utils.AddTask(5*time.Second, this.OnTime)
+    if this.task != nil {
+        this.task.Start()
+    } else {
+        this.task = utils.AddTask(5*time.Second, this.OnTime)    
+    }
 }
 
 func (this *ServConn) Send(b []byte) {
@@ -124,6 +154,11 @@ func (manager *DefaultManager) OnServConnAdd(servconn *ServConn) {
     println("new server connect ok")
     manager.ServConnList.Add(servconn)
 }
+
+func (manager *DefaultManager) OnServConnClose(servconn *ServConn) {
+    manager.ServConnList.Remove(servconn)
+}
+
 
 func (this *DefaultManager) OnTimeForServConn(servconn *ServConn) {
     if this.handler != nil {
