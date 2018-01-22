@@ -2,12 +2,58 @@ package utils
 
 import(
     "errors"
+    "sync"
 )
+
 
 type Array []interface{}
 
-func NewArray() Array {
-    return make(Array, 0)
+type ItemArray struct {
+    items Array
+    sync.Mutex
+}
+
+
+func (this *ItemArray) Add(elem interface{}) {
+    this.Lock()
+    this.items.Add(elem)
+    this.Unlock()
+}
+
+
+func (this *ItemArray) AddAt(elem interface{}, index int) error{
+    this.Lock()
+    err := this.items.AddAt(elem, index)
+    this.Unlock()
+    return err
+}
+
+
+func (this *ItemArray) RemoveAt(index int) (interface{} , error){
+    this.Lock()
+    result,err := this.items.RemoveAt(index)
+    this.Unlock()
+    return result,err
+}
+
+func (this *ItemArray) Remove(elem interface{}) error{
+    this.Lock()
+    err := this.items.Remove(elem)
+    this.Unlock()
+    return err
+}
+
+
+func (this *ItemArray) Get(index int) (interface{},error) {
+    return this.items.Get(index)
+}
+
+func (this *ItemArray) Size() int {
+    return this.items.Size()
+}
+
+func NewArray() *ItemArray{
+    return &ItemArray{items:make(Array,0)}
 }
 
 func (this *Array) Add(elem interface{}){

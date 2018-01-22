@@ -11,6 +11,7 @@ import (
     "net/http"
     "bufio"
     "bytes"
+    "sync"
     // "time"
     // "log"
     "fmt"
@@ -47,15 +48,19 @@ type Manager struct{
     clientMap map[int64]*conn.ClientConn
     DbConnManager *conn.DefaultManager
     RConnManager *conn.DefaultManager
+    sync.Mutex
 }
 
 func (manager *Manager) NewConn(tcpConn *net.TCPConn){
     client := conn.NewClientConn(&base.BConn{Conn:tcpConn},manager)
-    client.Run()
+    
     fd := client.GetSocketFd()
     if fd > 0 {
         ylog.ILog("add client:",fd)
+        manager.Lock()
         manager.clientMap[fd] = client
+        manager.Unlock()
+        client.Run()
     }
 }
 
@@ -253,6 +258,25 @@ func (manager *Manager)DoResponseForChangeMember(pdu *base.Pdu){
 }
 
 
+
+func (manager *Manager)DoTest(postData []byte, client *conn.ClientConn) {
+    ylog.ILog("DoTest")
+    // var reqData ChangeMemberReq
+    // err := json.Unmarshal(postData,&reqData)
+    errMsg := "Error"
+    // if err != nil {
+    //     ylog.ILog(err.Error())
+    //     errMsg = SimpleErrorMsg(1,err.Error())
+    // } else if reqData.GroupId == 0 {
+    //     errMsg = SimpleErrorMsg(1,"no group_id")
+    // } else if len(reqData.MemberIdList) == 0 {
+    //     errMsg = SimpleErrorMsg(1,"user_id_list is empty")
+    // }
+    outData := fmt.Sprintf(HTTP_QUEYR_HEADER, len(errMsg) , errMsg);
+    client.Send([]byte(outData))
+    client.Close()
+}
+
 func (manager *Manager)DispatchQuery(url string,postData []byte,client *conn.ClientConn) {
     _, err := jason.NewObjectFromBytes(postData)
     if err == nil {
@@ -263,6 +287,9 @@ func (manager *Manager)DispatchQuery(url string,postData []byte,client *conn.Cli
         case "/query/ChangeMembers":
             manager.DoChangeMembers(postData, client)
             break
+        case "/query/test":
+            manager.DoTest(postData, client)
+            break
         default:
             println("url:",url)
         }
@@ -271,7 +298,9 @@ func (manager *Manager)DispatchQuery(url string,postData []byte,client *conn.Cli
 
 func (manager *Manager)OnClose(client *conn.ClientConn) {
    fd := client.GetSocketFd()
+   manager.Lock()
    delete(manager.clientMap, fd)
+   manager.Unlock()
 }
 
 func (manager *Manager)HandleData(data []byte,client *conn.ClientConn) error{
@@ -296,8 +325,8 @@ func main() {
     rConnManager := conn.NewDefaultManager(manager)
     manager.DbConnManager = connManager
     manager.RConnManager = rConnManager
-    conn.AddNewServConnFor("im.xiaominfc.com",10600,connManager)
-    conn.AddNewServConnFor("im.xiaominfc.com",8200,rConnManager)
+    // conn.AddNewServConnFor("im.xiaominfc.com",10600,connManager)
+    // conn.AddNewServConnFor("im.xiaominfc.com",8200,rConnManager)
     server := base.NewTcpServer("0.0.0.0",9090, manager)
     server.Start()
 }

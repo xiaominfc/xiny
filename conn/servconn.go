@@ -129,7 +129,7 @@ func (this *ServConn) Send(b []byte) {
 }
 
 type DefaultManager struct{
-    ServConnList utils.Array
+    ServConnList *utils.ItemArray
     handler   PduHandler
 }
 
